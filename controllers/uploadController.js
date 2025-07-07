@@ -50,7 +50,7 @@ const upload = multer({
   storage, 
   fileFilter,
   limits: { 
-    fileSize: 500 * 1024 * 1024, // 100MB limit
+    fileSize: 200 * 1024 * 1024, // 100MB limit
     files: 1 // Limit to single file upload
   }
 });
@@ -117,8 +117,65 @@ const handleMulterErrors = (err, req, res, next) => {
   next();
 };
 
+
+const streamVideo = async (req, res) => {
+    try {
+        // Get parameters with proper fallbacks
+        const folderName = req.params.folderName || 'videos';
+        const filename = req.params.filename || req.params.video_id;
+        
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename is required' });
+        }
+
+        const videoPath = path.join(__dirname, '../', folderName, filename);
+
+        // Check if file exists
+        if (!fs.existsSync(videoPath)) {
+            return res.status(404).json({ 
+                error: 'Video not found',
+                path: videoPath,
+                params: req.params
+            });
+        }
+
+        const videoSize = fs.statSync(videoPath).size;
+        const range = req.headers.range;
+
+        if (range) {
+            const CHUNK_SIZE = 10 ** 6; // 1MB chunks
+            const start = Number(range.replace(/\D/g, ''));
+            const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+            
+            const videoStream = fs.createReadStream(videoPath, { start, end });
+            
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': end - start + 1,
+                'Content-Type': 'video/mp4'
+            });
+
+            videoStream.pipe(res);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': videoSize,
+                'Content-Type': 'video/mp4'
+            });
+            fs.createReadStream(videoPath).pipe(res);
+        }
+    } catch (error) {
+        console.error('Streaming error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+    }
+};
+
 module.exports = {
   upload,
   uploadFile,
-  handleMulterErrors
+  handleMulterErrors,
+  streamVideo
 };
