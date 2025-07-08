@@ -179,6 +179,8 @@
 //   handleMulterErrors,
 //   streamVideo
 // };
+
+
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -247,18 +249,30 @@ const uploadFile = (req, res) => {
     }
 
     const folderName = req.params.folderName || 'uploads';
-const fileUrl = `${req.protocol}://${req.get('host')}/api/upload/${folderName}/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    // Direct download URL
+    const downloadUrl = `${baseUrl}/api/upload/${folderName}/${req.file.filename}`;
+    
+    // Streaming URL (only for videos)
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const streamUrl = isVideo 
+      ? `${baseUrl}/api/upload/stream/${folderName}/${req.file.filename}`
+      : null;
 
     res.status(201).json({
       success: true,
       message: 'File uploaded successfully',
-      url: fileUrl,
+      urls: {
+        download: downloadUrl,
+        stream: streamUrl  // will be null for non-video files
+      },
       file: {
         originalname: req.file.originalname,
         filename: req.file.filename,
         size: req.file.size,
         mimetype: req.file.mimetype,
-        path: req.file.path
+        isVideo: isVideo
       }
     });
   } catch (error) {
@@ -269,7 +283,6 @@ const fileUrl = `${req.protocol}://${req.get('host')}/api/upload/${folderName}/$
     });
   }
 };
-
 // Multer error handler
 const handleMulterErrors = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
@@ -298,8 +311,67 @@ const handleMulterErrors = (err, req, res, next) => {
   next();
 };
 
+
+const streamVideo = async (req, res) => {
+    try {
+        // Get parameters with proper fallbacks
+        const folderName = req.params.folderName || 'videos';
+        const filename = req.params.filename || req.params.video_id;
+        
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename is required' });
+        }
+
+        const videoPath = path.join(__dirname, '../', folderName, filename);
+
+        // Check if file exists
+        if (!fs.existsSync(videoPath)) {
+            return res.status(404).json({ 
+                error: 'Video not found',
+                path: videoPath,
+                params: req.params
+            });
+        }
+
+        const videoSize = fs.statSync(videoPath).size;
+        const range = req.headers.range;
+
+        if (range) {
+            const CHUNK_SIZE = 10 ** 6; // 1MB chunks
+            const start = Number(range.replace(/\D/g, ''));
+            const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+            
+            const videoStream = fs.createReadStream(videoPath, { start, end });
+            
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': end - start + 1,
+                'Content-Type': 'video/mp4'
+            });
+
+            videoStream.pipe(res);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': videoSize,
+                'Content-Type': 'video/mp4'
+            });
+            fs.createReadStream(videoPath).pipe(res);
+        }
+    } catch (error) {
+        console.error('Streaming error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+    }
+};
+
+
+
 module.exports = {
   upload,
   uploadFile,
-  handleMulterErrors
+  handleMulterErrors,
+  streamVideo
 };  
