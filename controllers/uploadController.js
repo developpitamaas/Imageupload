@@ -1,186 +1,3 @@
-// const multer = require('multer');
-// const path = require('path');
-// const fs = require('fs');
-
-// // Configure storage
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => { 
-//     let folderName = 'uploads'; // default folder
-//     if (req.params.folderName) {
-//       folderName = req.params.folderName;
-//     }
-//     const uploadPath = path.join(__dirname, '../', folderName);
-    
-//     // Create folder if it doesn't exist
-//     if (!fs.existsSync(uploadPath)) {
-//       fs.mkdirSync(uploadPath, { recursive: true });
-//     }
-    
-//     cb(null, uploadPath);
-//   },
-//   filename: (req, file, cb) => {
-//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-//     const ext = path.extname(file.originalname);
-//     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-//   }
-// });
-
-// // File filter for images and videos
-// const fileFilter = (req, file, cb) => {
-//   const allowedTypes = [
-//     'image/jpeg', 
-//     'image/png', 
-//     'image/gif', 
-//     'image/webp', 
-//     'video/mp4', 
-//     'video/quicktime',
-//     'video/x-msvideo',
-//     'video/x-matroska',
-//     'video/webm'
-//   ];
-  
-//   if (allowedTypes.includes(file.mimetype)) {
-//     cb(null, true);
-//   } else {
-//     cb(new Error('Invalid file type. Only images and videos are allowed.'), false);
-//   }
-// };
-
-// const upload = multer({ 
-//   storage, 
-//   fileFilter,
-//   limits: { 
-//     fileSize: 200 * 1024 * 1024, // 100MB limit
-//     files: 1 // Limit to single file upload
-//   }
-// });
-
-// // Handle file upload
-// const uploadFile = (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({ 
-//         success: false,
-//         error: 'No file uploaded or invalid file type' 
-//       });
-//     }
-
-//     const folderName = req.params.folderName || 'uploads';
-// const fileUrl = `${req.protocol}://${req.get('host')}/api/upload/${folderName}/${req.file.filename}`;
-
-//     res.status(201).json({
-//       success: true,
-//       message: 'File uploaded successfully',
-//       url: fileUrl,
-//       file: {
-//         originalname: req.file.originalname,
-//         filename: req.file.filename,
-//         size: req.file.size,
-//         mimetype: req.file.mimetype,
-//         path: req.file.path
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Upload error:', error);
-//     res.status(500).json({ 
-//       success: false,
-//       error: error.message || 'File upload failed' 
-//     });
-//   }
-// };
-
-// // Multer error handler
-// const handleMulterErrors = (err, req, res, next) => {
-//   if (err instanceof multer.MulterError) {
-//     if (err.code === 'LIMIT_FILE_SIZE') {
-//       return res.status(413).json({ 
-//         success: false,
-//         error: 'File too large. Maximum size is 100MB' 
-//       });
-//     }
-//     if (err.code === 'LIMIT_FILE_COUNT') {
-//       return res.status(400).json({ 
-//         success: false,
-//         error: 'Too many files. Only single file uploads are allowed' 
-//       });
-//     }
-//     return res.status(400).json({ 
-//       success: false,
-//       error: err.message 
-//     });
-//   } else if (err) {
-//     return res.status(500).json({ 
-//       success: false,
-//       error: err.message || 'Internal server error' 
-//     });
-//   }
-//   next();
-// };
-
-
-// const streamVideo = async (req, res) => {
-//     try {
-//         // Get parameters with proper fallbacks
-//         const folderName = req.params.folderName || 'videos';
-//         const filename = req.params.filename || req.params.video_id;
-        
-//         if (!filename) {
-//             return res.status(400).json({ error: 'Filename is required' });
-//         }
-
-//         const videoPath = path.join(__dirname, '../', folderName, filename);
-
-//         // Check if file exists
-//         if (!fs.existsSync(videoPath)) {
-//             return res.status(404).json({ 
-//                 error: 'Video not found',
-//                 path: videoPath,
-//                 params: req.params
-//             });
-//         }
-
-//         const videoSize = fs.statSync(videoPath).size;
-//         const range = req.headers.range;
-
-//         if (range) {
-//             const CHUNK_SIZE = 10 ** 6; // 1MB chunks
-//             const start = Number(range.replace(/\D/g, ''));
-//             const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
-            
-//             const videoStream = fs.createReadStream(videoPath, { start, end });
-            
-//             res.writeHead(206, {
-//                 'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-//                 'Accept-Ranges': 'bytes',
-//                 'Content-Length': end - start + 1,
-//                 'Content-Type': 'video/mp4'
-//             });
-
-//             videoStream.pipe(res);
-//         } else {
-//             res.writeHead(200, {
-//                 'Content-Length': videoSize,
-//                 'Content-Type': 'video/mp4'
-//             });
-//             fs.createReadStream(videoPath).pipe(res);
-//         }
-//     } catch (error) {
-//         console.error('Streaming error:', error);
-//         res.status(500).json({ 
-//             error: 'Internal server error',
-//             details: error.message 
-//         });
-//     }
-// };
-
-// module.exports = {
-//   upload,
-//   uploadFile,
-//   handleMulterErrors,
-//   streamVideo
-// };
-
-
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -188,13 +5,12 @@ const fs = require('fs');
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let folderName = 'uploads'; // default folder
+    let folderName = 'uploads';
     if (req.params.folderName) {
       folderName = req.params.folderName;
     }
     const uploadPath = path.join(__dirname, '../', folderName);
     
-    // Create folder if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -208,170 +24,115 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter for images and videos
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
-    'image/jpeg', 
-    'image/png', 
-    'image/gif', 
-    'image/webp', 
-    'video/mp4', 
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/x-matroska',
-    'video/webm'
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/quicktime', 'video/x-msvideo',
+    'video/x-matroska', 'video/webm'
   ];
   
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only images and videos are allowed.'), false);
-  }
+  cb(null, allowedTypes.includes(file.mimetype));
 };
 
 const upload = multer({ 
   storage, 
   fileFilter,
   limits: { 
-    fileSize: 500 * 1024 * 1024, // 100MB limit
-    files: 1 // Limit to single file upload
+    fileSize: 500 * 1024 * 1024, // 500MB limit
+    files: 1
   }
 });
 
-// Handle file upload
 const uploadFile = (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'No file uploaded or invalid file type' 
-      });
-    }
-
-    const folderName = req.params.folderName || 'uploads';
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    
-    // Direct download URL
-    const downloadUrl = `${baseUrl}/api/upload/${folderName}/${req.file.filename}`;
-    
-    // Streaming URL (only for videos)
-    const isVideo = req.file.mimetype.startsWith('video/');
-    const streamUrl = isVideo 
-      ? `${baseUrl}/api/upload/stream/${folderName}/${req.file.filename}`
-      : null;
-
-    res.status(201).json({
-      success: true,
-      message: 'File uploaded successfully',
-      urls: {
-        download: downloadUrl,
-        stream: streamUrl  // will be null for non-video files
-      },
-      file: {
-        originalname: req.file.originalname,
-        filename: req.file.filename,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        isVideo: isVideo
-      }
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message || 'File upload failed' 
-    });
-  }
-};
-// Multer error handler
-const handleMulterErrors = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ 
-        success: false,
-        error: 'File too large. Maximum size is 100MB' 
-      });
-    }
-    if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Too many files. Only single file uploads are allowed' 
-      });
-    }
+  if (!req.file) {
     return res.status(400).json({ 
       success: false,
-      error: err.message 
+      error: 'No file uploaded or invalid file type' 
+    });
+  }
+
+  const folderName = req.params.folderName || 'uploads';
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  
+  const downloadUrl = `${baseUrl}/api/upload/${folderName}/${req.file.filename}`;
+  const isVideo = req.file.mimetype.startsWith('video/');
+  
+  res.status(201).json({
+    success: true,
+    message: 'File uploaded successfully',
+    url: {
+      download: downloadUrl,
+      stream: isVideo 
+        ? `${baseUrl}/api/upload/stream/${folderName}/${req.file.filename}`
+        : null
+    },
+    file: {
+      originalname: req.file.originalname,
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      isVideo
+    }
+  });
+};
+
+const handleMulterErrors = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ 
+      success: false,
+      error: err.code === 'LIMIT_FILE_SIZE' 
+        ? 'File too large. Maximum size is 500MB'
+        : 'File upload error: ' + err.message
     });
   } else if (err) {
     return res.status(500).json({ 
       success: false,
-      error: err.message || 'Internal server error' 
+      error: err.message || 'File upload failed' 
     });
   }
   next();
 };
 
+const streamVideo = (req, res) => {
+  const folderName = req.params.folderName || 'videos';
+  const filename = req.params.filename;
+  const videoPath = path.join(__dirname, '../', folderName, filename);
 
-const streamVideo = async (req, res) => {
-    try {
-        // Get parameters with proper fallbacks
-        const folderName = req.params.folderName || 'videos';
-        const filename = req.params.filename || req.params.video_id;
-        
-        if (!filename) {
-            return res.status(400).json({ error: 'Filename is required' });
-        }
+  if (!fs.existsSync(videoPath)) {
+    return res.status(404).json({ error: 'Video not found' });
+  }
 
-        const videoPath = path.join(__dirname, '../', folderName, filename);
+  const videoSize = fs.statSync(videoPath).size;
+  const range = req.headers.range;
 
-        // Check if file exists
-        if (!fs.existsSync(videoPath)) {
-            return res.status(404).json({ 
-                error: 'Video not found',
-                path: videoPath,
-                params: req.params
-            });
-        }
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] 
+      ? parseInt(parts[1], 10)
+      : videoSize - 1;
+    const chunkSize = end - start + 1;
+    
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type': 'video/mp4'
+    });
 
-        const videoSize = fs.statSync(videoPath).size;
-        const range = req.headers.range;
-
-        if (range) {
-            const CHUNK_SIZE = 10 ** 6; // 1MB chunks
-            const start = Number(range.replace(/\D/g, ''));
-            const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
-            
-            const videoStream = fs.createReadStream(videoPath, { start, end });
-            
-            res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': end - start + 1,
-                'Content-Type': 'video/mp4'
-            });
-
-            videoStream.pipe(res);
-        } else {
-            res.writeHead(200, {
-                'Content-Length': videoSize,
-                'Content-Type': 'video/mp4'
-            });
-            fs.createReadStream(videoPath).pipe(res);
-        }
-    } catch (error) {
-        console.error('Streaming error:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: error.message 
-        });
-    }
+    fs.createReadStream(videoPath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, {
+      'Content-Length': videoSize,
+      'Content-Type': 'video/mp4'
+    });
+    fs.createReadStream(videoPath).pipe(res);
+  }
 };
-
-
 
 module.exports = {
   upload,
   uploadFile,
   handleMulterErrors,
   streamVideo
-};  
+};
