@@ -672,8 +672,7 @@ async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
                 .on('error', reject);
         });
 
-        // Optimize thumbnail with sharp (using original dimensions)
-        const optimizedThumbnail = await sharp(tempThumbnailPath)
+         const optimizedThumbnail = await sharp(tempThumbnailPath)
             .resize(originalWidth, originalHeight, {
                 fit: 'cover',
                 withoutEnlargement: true
