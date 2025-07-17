@@ -589,55 +589,7 @@
   /**
    * Generates a thumbnail from video and uploads to S3
    */
-  // async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
-  //   const timestamp = Date.now();
-  //   const baseName = path.basename(originalName, path.extname(originalName));
-  //   const thumbnailKey = `thumbnails/thumbnail_${timestamp}_${baseName}.jpg`;
-    
-  //   // Use unique temp file name with process ID
-  //   const tempThumbnailPath = path.join(os.tmpdir(), `thumbnail_${timestamp}_${process.pid}.jpg`);
-    
-  //   try {
-  //     // Capture thumbnail at 3 seconds
-  //     await new Promise((resolve, reject) => {
-  //       ffmpeg(videoPath)
-  //         .screenshots({
-  //           timestamps: ['00:00:03.000'],
-  //           filename: `thumbnail_${timestamp}_${process.pid}.jpg`,
-  //           folder: os.tmpdir(),
-  //           size: '640x360',
-  //           fastSeek: true
-  //         })
-  //         .on('end', resolve)
-  //         .on('error', reject);
-  //     });
-
-  //     // Optimize thumbnail with sharp
-  //     const optimizedThumbnail = await sharp(tempThumbnailPath)
-  //       .resize(640, 360, {
-  //         fit: 'cover',
-  //         withoutEnlargement: true
-  //       })
-  //       .jpeg({ 
-  //         quality: 80,
-  //         mozjpeg: true 
-  //       })
-  //       .toBuffer();
-
-  //     // Upload thumbnail to S3
-  //     const thumbnailData = await s3.upload({
-  //       Bucket: bucket,
-  //       Key: thumbnailKey,
-  //       Body: optimizedThumbnail,
-  //       ContentType: 'image/jpeg'
-  //     }).promise();
-
-  //     return thumbnailData.Location;
-  //   } finally {
-  //     await deleteFileWithRetry(tempThumbnailPath);
-  //   }
-  // }
-async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
+  async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
     const timestamp = Date.now();
     const baseName = path.basename(originalName, path.extname(originalName));
     const thumbnailKey = `thumbnails/thumbnail_${timestamp}_${baseName}.jpg`;
@@ -646,56 +598,108 @@ async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
     const tempThumbnailPath = path.join(os.tmpdir(), `thumbnail_${timestamp}_${process.pid}.jpg`);
     
     try {
-        // First get video metadata to determine original dimensions
-        const videoMetadata = await new Promise((resolve, reject) => {
-            ffmpeg.ffprobe(videoPath, (err, metadata) => {
-                if (err) reject(err);
-                else resolve(metadata);
-            });
-        });
+      // Capture thumbnail at 3 seconds
+      await new Promise((resolve, reject) => {
+        ffmpeg(videoPath)
+          .screenshots({
+            timestamps: ['00:00:03.000'],
+            filename: `thumbnail_${timestamp}_${process.pid}.jpg`,
+            folder: os.tmpdir(),
+            size: '640x360',
+            fastSeek: true
+          })
+          .on('end', resolve)
+          .on('error', reject);
+      });
 
-        // Get video dimensions from metadata
-        const videoStream = videoMetadata.streams.find(stream => stream.codec_type === 'video');
-        const { width: originalWidth, height: originalHeight } = videoStream;
+      // Optimize thumbnail with sharp
+      const optimizedThumbnail = await sharp(tempThumbnailPath)
+        .resize(640, 360, {
+          fit: 'cover',
+          withoutEnlargement: true
+        })
+        .jpeg({ 
+          quality: 80,
+          mozjpeg: true 
+        })
+        .toBuffer();
 
-        // Capture thumbnail at 3 seconds using original dimensions
-        await new Promise((resolve, reject) => {
-            ffmpeg(videoPath)
-                .screenshots({
-                    timestamps: ['00:00:03.000'],
-                    filename: `thumbnail_${timestamp}_${process.pid}.jpg`,
-                    folder: os.tmpdir(),
-                    size: `${originalWidth}x${originalHeight}`,
-                    fastSeek: true
-                })
-                .on('end', resolve)
-                .on('error', reject);
-        });
+      // Upload thumbnail to S3
+      const thumbnailData = await s3.upload({
+        Bucket: bucket,
+        Key: thumbnailKey,
+        Body: optimizedThumbnail,
+        ContentType: 'image/jpeg'
+      }).promise();
 
-         const optimizedThumbnail = await sharp(tempThumbnailPath)
-            .resize(originalWidth, originalHeight, {
-                fit: 'cover',
-                withoutEnlargement: true
-            })
-            .jpeg({ 
-                quality: 80,
-                mozjpeg: true 
-            })
-            .toBuffer();
-
-        // Upload thumbnail to S3
-        const thumbnailData = await s3.upload({
-            Bucket: bucket,
-            Key: thumbnailKey,
-            Body: optimizedThumbnail,
-            ContentType: 'image/jpeg'
-        }).promise();
-
-        return thumbnailData.Location;
+      return thumbnailData.Location;
     } finally {
-        await deleteFileWithRetry(tempThumbnailPath);
+      await deleteFileWithRetry(tempThumbnailPath);
     }
-}
+  }
+
+
+
+
+// async function generateAndUploadThumbnail(videoPath, originalName, bucket) {
+//     const timestamp = Date.now();
+//     const baseName = path.basename(originalName, path.extname(originalName));
+//     const thumbnailKey = `thumbnails/thumbnail_${timestamp}_${baseName}.jpg`;
+    
+//     // Use unique temp file name with process ID
+//     const tempThumbnailPath = path.join(os.tmpdir(), `thumbnail_${timestamp}_${process.pid}.jpg`);
+    
+//     try {
+//         // First get video metadata to determine original dimensions
+//         const videoMetadata = await new Promise((resolve, reject) => {
+//             ffmpeg.ffprobe(videoPath, (err, metadata) => {
+//                 if (err) reject(err);
+//                 else resolve(metadata);
+//             });
+//         });
+
+//         // Get video dimensions from metadata
+//         const videoStream = videoMetadata.streams.find(stream => stream.codec_type === 'video');
+//         const { width: originalWidth, height: originalHeight } = videoStream;
+
+//         // Capture thumbnail at 3 seconds using original dimensions
+//         await new Promise((resolve, reject) => {
+//             ffmpeg(videoPath)
+//                 .screenshots({
+//                     timestamps: ['00:00:03.000'],
+//                     filename: `thumbnail_${timestamp}_${process.pid}.jpg`,
+//                     folder: os.tmpdir(),
+//                     size: `${originalWidth}x${originalHeight}`,
+//                     fastSeek: true
+//                 })
+//                 .on('end', resolve)
+//                 .on('error', reject);
+//         });
+
+//          const optimizedThumbnail = await sharp(tempThumbnailPath)
+//             .resize(originalWidth, originalHeight, {
+//                 fit: 'cover',
+//                 withoutEnlargement: true
+//             })
+//             .jpeg({ 
+//                 quality: 80,
+//                 mozjpeg: true 
+//             })
+//             .toBuffer();
+
+//         // Upload thumbnail to S3
+//         const thumbnailData = await s3.upload({
+//             Bucket: bucket,
+//             Key: thumbnailKey,
+//             Body: optimizedThumbnail,
+//             ContentType: 'image/jpeg'
+//         }).promise();
+
+//         return thumbnailData.Location;
+//     } finally {
+//         await deleteFileWithRetry(tempThumbnailPath);
+//     }
+// }
   /**
    * Validates and compresses video file
    */
