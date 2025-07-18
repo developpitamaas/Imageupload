@@ -388,7 +388,7 @@ async function generateAndUploadThumbnail(videoPath, originalName, bucket ,width
   const tempThumbnailPath = path.join(os.tmpdir(), `thumbnail_${timestamp}_${process.pid}.jpg`);
   
   try {
-    // Use fixed dimensions that match the compressed video (640x360)
+    // Use fixed dimensions that match the compressed video 
     const sizeOption = `${width}x${height}`;
     
     // Capture thumbnail at 3 seconds
